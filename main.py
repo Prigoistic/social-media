@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.params import Body
 from pydantic import BaseModel
 from typing import Optional
@@ -33,3 +33,18 @@ def create_posts(post: Post):
     post_dict['id'] = randrange(0, 1000000)
     my_posts.append(post_dict)
     return {"data": "Post created successfully", "post": post_dict}  
+
+@app.get("/posts/latest")   #here latest post is before the id cause we dont want latest to be confused with id as a path parameter
+def get_latest_post():
+    if my_posts:
+        latest_post = max(my_posts, key=lambda x: x['id'])
+        return {"data": latest_post}
+    return {"error": "No posts available", "status_code": 404}
+
+@app.get("/posts/{id}")
+def get_post(id: int, response: Response):
+    for post in my_posts:
+        if post['id'] == id:
+            return {"data": post}
+    response.status_code = 404
+    return {"error": "Post not found", "status_code": 404}
