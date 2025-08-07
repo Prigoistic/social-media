@@ -6,8 +6,23 @@ from random import randrange
 from fastapi import status
 import psycopg
 from psycopg.rows import dict_row
+import time
+import models
+from sqlalchemy.orm import Session
+from .db import engine,SessionLocal
+
+
+models.Base.metadata.create_all(bind=engine)  # Create database tables
 
 app = FastAPI()
+
+def get_db():
+    """Dependency to get a database session"""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()  
 
 class Post(BaseModel):
     title: str
@@ -56,6 +71,8 @@ my_posts = [
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the POST application!"}
+
+
 
 @app.get("/posts")
 def get_posts():
