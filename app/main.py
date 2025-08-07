@@ -101,20 +101,24 @@ def get_post(id: int, response: Response):
 
 @app.delete("/posts/{id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_post(id: int, response: Response):
-    for index, post in enumerate(my_posts): # enumerate gives us both index and post
-        if post['id'] == id: # Check if the post ID matches
-            del my_posts[index]     # Delete the post from the list
-            return Response(status_code=status.HTTP_204_NO_CONTENT) # Return 204 No Content 
-    response.status_code = status.HTTP_404_NOT_FOUND
-    return {"error": "Post not found", "status_code": status.HTTP_404_NOT_FOUND}
+    cursor.execute("""DELETE FROM posts WHERE id = %s RETURNING *;""", (id,))
+    deleted_post = cursor.fetchone() # Fetch the deleted post to return it
+    conn.commit() # Commit the deletion to the database
+    if deleted_post is None:    # If no post was deleted, return an error
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return {"error": "Post not found", "status_code": status.HTTP_404_NOT_FOUND}
+    return {"data": "Post deleted successfully", "deleted_post": dict(deleted_post)}
+   
+
 
 @app.put("/posts/{id}")
 def update_post(id: int, post: Post, response: Response):
-    for index, existing_post in enumerate(my_posts): # enumerate gives us both index and existing_post
-        if existing_post['id'] == id:
-            post_dict = post.model_dump()   # Convert Pydantic model to dict
-            post_dict['id'] = id # Ensure the ID remains the same
-            my_posts[index] = post_dict # Update the post in the list
-            return {"data": post_dict}  # Return the updated post
-    response.status_code = status.HTTP_404_NOT_FOUND
-    return {"error": "Post not found", "status_code": status.HTTP_404_NOT_FOUND}
+    cursor.execute("""UPDATE posts SET title = %s, content = %s, published = %s WHERE id = %s RETURNING *;""",
+                   (post.title, post.content, post.published, id))
+    updated_post = cursor.fetchone()  # Fetch the updated post from the database
+    conn.commit()  # Commit the changes to the database
+    if updated_post is None:  # If no post was updated, return an error
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return {"error": "Post not found", "status_code": status.HTTP_404_NOT_FOUND}        
+    return {"data": "Post updated successfully", "updated_post": dict(updated_post)}
+
