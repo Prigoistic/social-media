@@ -1,11 +1,15 @@
-from .db import Base
-from sqlalchemy import Column, Integer, String
+from db import Base
+from sqlalchemy import Column, Integer, String, Boolean, Text, TIMESTAMP, text
+from sqlalchemy.sql import func
+
 
 
 class Post(Base):
     __tablename__ = "posts"
 
-    id = Column(Integer, primary_key=True, index=True)
-    title = Column(String, index=True)
-    content = Column(String, index=True)
-    published = Column(Integer, default=1)  # Assuming published is a boolean represented as an integer (1 for True, 0 for False)
+    id = Column(Integer, primary_key=True, index=True, nullable=False)
+    title = Column(String(255), index=True, nullable=False)
+    content = Column(Text, nullable=False)
+    published = Column(Boolean, server_default='TRUE', nullable=False)
+    rating = Column(Integer, nullable=True)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=text('now()'), nullable=False)

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Response, HTTPException
+from fastapi import FastAPI, Response, HTTPException,Depends
 from fastapi.params import Body
 from pydantic import BaseModel
 from typing import Optional
@@ -8,21 +8,17 @@ import psycopg
 from psycopg.rows import dict_row
 import time
 import models
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session
-from .db import engine,SessionLocal
+from db import engine, get_db
 
 
 models.Base.metadata.create_all(bind=engine)  # Create database tables
 
 app = FastAPI()
 
-def get_db():
-    """Dependency to get a database session"""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()  
+
 
 class Post(BaseModel):
     title: str
@@ -72,32 +68,44 @@ my_posts = [
 def read_root():
     return {"message": "Welcome to the POST application!"}
 
+@app.get("/sqlalchemy") #test
+def get_sqlalchemy_status(db: Session = Depends(get_db)):
 
+    p = db.query(models.Post).all()
+    return {"data": p}
+#db: Session = Depends(get_db) this is a dependency injection 
 
 @app.get("/posts")
-def get_posts():
-    try:
-        conn, cursor = get_db_connection()
-        cursor.execute("""SELECT * FROM posts;""")
-        posts = cursor.fetchall()
-        return {"data": posts}
-    except Exception as e:
-        print(f"Error fetching posts: {e}")
-        raise HTTPException(status_code=500, detail="Failed to fetch posts from database")
+def get_posts(db: Session = Depends(get_db)):
+    posts = db.query(models.Post).all()
+    return {"data": posts}
+
+    # try:
+    #     posts = db.execute("SELECT * FROM posts;").fetchall()
+    #     return {"data": posts}
+    # except Exception as e:
+    #     print(f"Error fetching posts: {e}")
+    #     raise HTTPException(status_code=500, detail="Failed to fetch posts from database")
 
 @app.post("/createposts/", status_code=status.HTTP_201_CREATED)
-def create_posts(post: Post):
-    conn, cursor = get_db_connection()  # Ensure we have a valid connection FIRST
-    cursor.execute(
-        """INSERT INTO posts (title, content, published) VALUES (%s, %s, %s) RETURNING *;""",
-        (post.title, post.content, post.published)
+def create_posts(post: Post, db: Session = Depends(get_db)):
+    new_post = models.Post(
+        title=post.title,
+        content=post.content,
+        published=post.published,
+        rating=post.rating
     )
-    new_post = cursor.fetchone()
-    conn.commit() #commits changes into the database
-    post_dict = dict(new_post)
-    my_posts.append(post_dict)  # Append the new post to the in-memory list
+    db.add(new_post)
+    db.commit()
+    db.refresh(new_post)
+    return {"data": new_post}
 
-    return {"data": "Post created successfully", "post": post_dict}  
+    # new_post = cursor.fetchone()
+    # conn.commit() #commits changes into the database
+    # post_dict = dict(new_post)
+    # my_posts.append(post_dict)  # Append the new post to the in-memory list
+
+    # return {"data": "Post created successfully", "post": post_dict}  
 
 @app.get("/posts/latest")   #here latest post is before the id cause we dont want latest to be confused with id as a path parameter
 def get_latest_post():
