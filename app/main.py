@@ -9,7 +9,7 @@ import psycopg
 from psycopg.rows import dict_row
 import time
 import db
-import models
+import models, schemas  # Import models and schemas
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session
@@ -22,12 +22,7 @@ app = FastAPI()
 
 
 
-class Post(BaseModel):
-    title: str
-    content: str
-    published: bool = True
-    rating: Optional[int] = None
-    id: Optional[int] = None
+
 
 # # Global variables for database connection
 # conn = None
@@ -70,17 +65,13 @@ class Post(BaseModel):
 def read_root():
     return {"message": "Welcome to the POST application!"}
 
-@app.get("/sqlalchemy") #test
-def get_sqlalchemy_status(db: Session = Depends(get_db)):
 
-    p = db.query(models.Post).all()
-    return {"data": p}
 #db: Session = Depends(get_db) this is a dependency injection 
 
-@app.get("/posts")
+@app.get("/posts", response_model=list[schemas.Post])
 def get_posts(db: Session = Depends(get_db)):
     posts = db.query(models.Post).all()
-    return {"data": posts}
+    return posts
 
     # try:
     #     posts = db.execute("SELECT * FROM posts;").fetchall()
@@ -89,18 +80,13 @@ def get_posts(db: Session = Depends(get_db)):
     #     print(f"Error fetching posts: {e}")
     #     raise HTTPException(status_code=500, detail="Failed to fetch posts from database")
 
-@app.post("/createposts/", status_code=status.HTTP_201_CREATED)
-def create_posts(post: Post, db: Session = Depends(get_db)):
-    new_post = models.Post( **post.model_dump()) # basically using spread operator
-        # title=post.title,
-        # content=post.content,
-        # published=post.published,
-        # rating=post.rating
-    
+@app.post("/createposts/", status_code=status.HTTP_201_CREATED, response_model=schemas.Post)
+def create_posts(post: schemas.PostCreate, db: Session = Depends(get_db)):
+    new_post = models.Post(**post.model_dump())
     db.add(new_post)
     db.commit()
     db.refresh(new_post)
-    return {"data": new_post}
+    return new_post
 
     # new_post = cursor.fetchone()
     # conn.commit() #commits changes into the database
@@ -121,7 +107,8 @@ def get_post(id: int, response: Response, db: Session = Depends(get_db)):
     post = db.query(models.Post).filter(models.Post.id == id).first()
     if post is None:
         response.status_code = status.HTTP_404_NOT_FOUND
-    return {"data": post}
+        return {"error": "Post not found", "status_code": status.HTTP_404_NOT_FOUND}
+    return post
 
 
 @app.delete("/posts/{id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -137,15 +124,18 @@ def delete_post(id: int, response: Response, db: Session = Depends(get_db)):
 
 
 @app.put("/posts/{id}")
-def update_post(id: int, post: Post, response: Response, db: Session = Depends(get_db)):
-    existing_post = db.query(models.Post).filter(models.Post.id == id).first()
-    if existing_post is None:
+def update_post(id: int, post: schemas.PostUpdate, response: Response, db: Session = Depends(get_db)):
+    update_data = post.model_dump(exclude_unset=True)
+    update_data.pop("id", None)  # Remove 'id' if present
+    updated = db.query(models.Post).filter(models.Post.id == id).update(update_data)
+    db.commit()
+    if not updated:
         response.status_code = status.HTTP_404_NOT_FOUND
         return {"error": "Post not found", "status_code": status.HTTP_404_NOT_FOUND}
-    db.query(models.Post).filter(models.Post.id == id).update(post.model_dump())
-    db.commit()
-    return {"data": "Post updated successfully"}    
-    # cursor.execute("""UPDATE posts SET title = %s, content = %s, published = %s WHERE id = %s RETURNING *;""",
+    updated_post = db.query(models.Post).filter(models.Post.id == id).first()
+    return updated_post
+
+# cursor.execute("""UPDATE posts SET title = %s, content = %s, published = %s WHERE id = %s RETURNING *;""",
     #                (post.title, post.content, post.published, id))
     # updated_post = cursor.fetchone()  # Fetch the updated post from the database
     # conn.commit()  # Commit the changes to the database
@@ -154,3 +144,10 @@ def update_post(id: int, post: Post, response: Response, db: Session = Depends(g
     #     return {"error": "Post not found", "status_code": status.HTTP_404_NOT_FOUND}        
     # return {"data": "Post updated successfully", "updated_post": dict(updated_post)}
 
+@app.post("/users/", response_model=schemas.User)
+def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    new_user = models.User(**user.model_dump())
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return new_user
