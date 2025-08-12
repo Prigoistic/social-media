@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from typing import Optional
 from random import randrange
 from fastapi import status
+from passlib.context import CryptContext
 import psycopg
 from psycopg.rows import dict_row
 import time
@@ -15,7 +16,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session
 from db import engine, get_db
 
-
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 models.Base.metadata.create_all(bind=engine)  # Create database tables
 
 app = FastAPI()
@@ -144,8 +145,10 @@ def update_post(id: int, post: schemas.PostUpdate, response: Response, db: Sessi
     #     return {"error": "Post not found", "status_code": status.HTTP_404_NOT_FOUND}        
     # return {"data": "Post updated successfully", "updated_post": dict(updated_post)}
 
-@app.post("/users/", response_model=schemas.User)
+@app.post("/users/", response_model=schemas.UserResponse)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+
+    user.password = pwd_context.hash(user.password) #hashingggg
     new_user = models.User(**user.model_dump())
     db.add(new_user)
     db.commit()
