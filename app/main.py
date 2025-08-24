@@ -145,12 +145,21 @@ def update_post(id: int, post: schemas.PostUpdate, response: Response, db: Sessi
     #     return {"error": "Post not found", "status_code": status.HTTP_404_NOT_FOUND}        
     # return {"data": "Post updated successfully", "updated_post": dict(updated_post)}
 
-@app.post("/users/", response_model=schemas.UserResponse)
+@app.post("/users/", response_model=schemas.UserResponse) #Response for user creation
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-
+    existing_user = db.query(models.User).filter(models.User.email == user.email).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
     user.password = pwd_context.hash(user.password) #hashingggg
     new_user = models.User(**user.model_dump())
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
     return new_user
+
+@app.get("/users/{id}", response_model=schemas.UserResponse)
+def get_user(id: int, db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.id == id).first()
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
