@@ -41,3 +41,10 @@ class UserResponse(UserBase): #this class is the respone we send back the user a
     class Config:
         from_attributes = True  # This enables ORM mode
         # Use this to configure the model further if needed
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str

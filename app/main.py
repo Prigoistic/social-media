@@ -15,7 +15,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session
 from db import engine, get_db
-from routers import post, user
+from routers import post, user,auth
+
+
 
 
 models.Base.metadata.create_all(bind=engine)  # Create database tables
@@ -24,6 +26,7 @@ app = FastAPI()
 
 app.include_router(post.router, prefix="/posts", tags=["Posts"])
 app.include_router(user.router, prefix="/users", tags=["Users"])
+app.include_router(auth.router, prefix="/auth", tags=["Auth"])
 
 # # Global variables for database connection
 # conn = None
