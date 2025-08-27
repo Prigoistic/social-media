@@ -8,7 +8,7 @@ from db import get_db
 
 router = APIRouter()
 
-@router.get("/posts", response_model=list[schemas.Post])
+@router.get("/", response_model=list[schemas.Post])
 def get_posts(db: Session = Depends(get_db)):
     posts = db.query(models.Post).all()
     return posts
@@ -42,7 +42,7 @@ def create_posts(post: schemas.PostCreate, db: Session = Depends(get_db)):
 #         return {"data": latest_post}
 #     return {"error": "No posts available", "status_code": 404}
 
-@router.get("/posts/{id}")
+@router.get("/{id}")
 def get_post(id: int, response: Response, db: Session = Depends(get_db)):
     post = db.query(models.Post).filter(models.Post.id == id).first()
     if post is None:
@@ -51,7 +51,7 @@ def get_post(id: int, response: Response, db: Session = Depends(get_db)):
     return post
 
 
-@router.delete("/posts/{id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_post(id: int, response: Response, db: Session = Depends(get_db)):
     post = db.query(models.Post).filter(models.Post.id == id).first()
     if post is None:
@@ -63,7 +63,7 @@ def delete_post(id: int, response: Response, db: Session = Depends(get_db)):
    
 
 
-@router.put("/posts/{id}")
+@router.put("/{id}")
 def update_post(id: int, post: schemas.PostUpdate, response: Response, db: Session = Depends(get_db)):
     update_data = post.model_dump(exclude_unset=True)
     update_data.pop("id", None)  # Remove 'id' if present
