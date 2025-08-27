@@ -22,8 +22,8 @@ models.Base.metadata.create_all(bind=engine)  # Create database tables
 
 app = FastAPI()
 
-app.include_router(post.router, prefix="/posts")
-app.include_router(user.router, prefix="/users")
+app.include_router(post.router, prefix="/posts", tags=["Posts"])
+app.include_router(user.router, prefix="/users", tags=["Users"])
 
 # # Global variables for database connection
 # conn = None

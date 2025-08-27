@@ -7,7 +7,7 @@ from db import get_db
 router = APIRouter()
 
 
-@router.post("/users/", response_model=schemas.UserResponse) #Response for user creation
+@router.post("/", response_model=schemas.UserResponse) #Response for user creation
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     existing_user = db.query(models.User).filter(models.User.email == user.email).first()
     if existing_user:
@@ -19,7 +19,7 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db.refresh(new_user) 
     return new_user
 
-@router.get("/users/{id}", response_model=schemas.UserResponse)
+@router.get("/{id}", response_model=schemas.UserResponse)
 def get_user(id: int, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.id == id).first()
     if user is None:
