@@ -34,13 +34,7 @@ class UserResponse(UserBase): #this class is the respone we send back the user a
     id: int 
 
     class Config:
-        from_attributes = True
-    created_at: datetime
-    id: int
-
-    class Config:
         from_attributes = True  # This enables ORM mode
-        # Use this to configure the model further if needed
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
@@ -48,3 +42,6 @@ class UserLogin(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+class TokenData(BaseModel):
+    id: Optional[str] = None

@@ -2,6 +2,7 @@ from typing import List
 from fastapi import APIRouter, Depends, FastAPI, Response, status, HTTPException
 from sqlalchemy.orm import Session
 import models, schemas, utils
+from outh2 import get_current_user
 from db import get_db
 
 #api router is just a way to group related endpoints
@@ -21,7 +22,9 @@ def get_posts(db: Session = Depends(get_db)):
     #     raise HTTPException(status_code=500, detail="Failed to fetch posts from database")
 
 @router.post("/createposts/", status_code=status.HTTP_201_CREATED, response_model=schemas.Post)
-def create_posts(post: schemas.PostCreate, db: Session = Depends(get_db)):
+def create_posts(post: schemas.PostCreate, db: Session = Depends(get_db), current_user: schemas.TokenData = Depends(get_current_user)):
+
+    print(f"Current user ID: {current_user.id}")
     new_post = models.Post(**post.model_dump())
     db.add(new_post)
     db.commit()
